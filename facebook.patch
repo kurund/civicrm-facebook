@@ -1,0 +1,362 @@
+Index: CRM/Event/xml/Menu/Event.xml
+===================================================================
+--- CRM/Event/xml/Menu/Event.xml	(revision 40637)
++++ CRM/Event/xml/Menu/Event.xml	(working copy)
+@@ -219,6 +219,14 @@
+      <weight>950</weight>
+   </item>
+   <item>
++     <path>civicrm/event/manage/promote</path>
++     <title>Promote to Facebook</title>
++     <page_callback>CRM_Event_Form_ManageEvent_Promote</page_callback>
++     <access_arguments>access CiviEvent</access_arguments>
++     <is_ssl>true</is_ssl>
++     <weight>951</weight>
++  </item>
++  <item>
+      <path>civicrm/event/manage/conference</path>
+      <title>Conference Slots</title>
+      <page_callback>CRM_Event_Form_ManageEvent_Conference</page_callback>
+Index: CRM/Event/Form/ManageEvent/TabHeader.php
+===================================================================
+--- CRM/Event/Form/ManageEvent/TabHeader.php	(revision 40637)
++++ CRM/Event/Form/ManageEvent/TabHeader.php	(working copy)
+@@ -105,6 +105,12 @@
+         'active' => FALSE,
+         'current' => FALSE,
+       ),
++      'promote' => array('title' => ts('Publish to Facebook'),
++        'link' => NULL,
++        'valid' => FALSE,
++        'active' => FALSE,
++        'current' => FALSE,
++      )
+     );
+ 
+     // check if we're in shopping cart mode for events
+Index: CRM/Event/Form/ManageEvent/Promote.php
+===================================================================
+--- CRM/Event/Form/ManageEvent/Promote.php	(revision 0)
++++ CRM/Event/Form/ManageEvent/Promote.php	(revision 0)
+@@ -0,0 +1,230 @@
++<?php
++/*
++ +--------------------------------------------------------------------+
++ | CiviCRM version 4.1                                                |
++ +--------------------------------------------------------------------+
++ | Copyright CiviCRM LLC (c) 2004-2011                                |
++ +--------------------------------------------------------------------+
++ | This file is a part of CiviCRM.                                    |
++ |                                                                    |
++ | CiviCRM is free software; you can copy, modify, and distribute it  |
++ | under the terms of the GNU Affero General Public License           |
++ | Version 3, 19 November 2007 and the CiviCRM Licensing Exception.   |
++ |                                                                    |
++ | CiviCRM is distributed in the hope that it will be useful, but     |
++ | WITHOUT ANY WARRANTY; without even the implied warranty of         |
++ | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.               |
++ | See the GNU Affero General Public License for more details.        |
++ |                                                                    |
++ | You should have received a copy of the GNU Affero General Public   |
++ | License and the CiviCRM Licensing Exception along                  |
++ | with this program; if not, contact CiviCRM LLC                     |
++ | at info[AT]civicrm[DOT]org. If you have questions about the        |
++ | GNU Affero General Public License or the licensing of CiviCRM,     |
++ | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
++ +--------------------------------------------------------------------+
++*/
++
++/**
++ *
++ *
++ * @package CRM
++ * @copyright CiviCRM LLC (c) 2004-2011
++ * $Id$
++ *
++ */
++
++/**
++ * This class generates form components for publishing civicrm events on facebook 
++ */
++class CRM_Event_Form_ManageEvent_Promote extends CRM_Event_Form_ManageEvent {
++
++  /**
++   * logged in facebook user info
++   */
++  private $_user;
++
++  /**
++   * facebook object
++   */
++  private $_facebook;
++
++
++  /**
++   * Function to set variables up before form is built
++   *
++   * @return void
++   * @access public
++   */ 
++  function preProcess() {
++    parent::preProcess();
++
++    require 'facebook/php-sdk/src/facebook.php';
++    $this->_facebook = new Facebook(array(
++      'appId'  => '319233544823021',
++      'secret' => '304b7fc206bd31b8df488270a42a0695'
++    ));
++    
++    $this->assign( 'facebook', $this->_facebook );
++
++    // See if there is a user from a cookie
++    $this->_user = $this->_facebook->getUser();
++  }
++
++  /**
++   * This function sets the default values for the form. Note that in edit/view mode
++   * the default values are retrieved from the database
++   *
++   * @access public
++   *
++   * @return None
++   */
++  function setDefaultValues() {
++    $defaults = array();
++    $defaults = parent::setDefaultValues();
++
++    $eventUrl = CRM_Utils_System::url( 'civicrm/event/info', "reset=1&id={$this->_id}", TRUE, null, FALSE, TRUE ); 
++    $defaults['summary'] = "
++{$defaults['summary']}
++
++". ts('Click on below link to signup for this event')
++."
++{$eventUrl}";
++
++    return $defaults;
++  }
++
++  /**
++   * Add local and global form rules
++   *
++   * @access protected
++   *
++   * @return void
++   */
++  function addRules() {
++    $this->addFormRule(array('CRM_Event_Form_ManageEvent_Promote', 'formRule'));
++  }
++
++  /**
++   * global validation rules for the form
++   *
++   * @param array $fields posted values of the form
++   *
++   * @return array list of errors to be posted back to the form
++   * @static
++   * @access public
++   */
++  static function formRule($fields) {
++    $errors = array();
++
++    return empty($errors) ? TRUE : $errors;
++  }
++
++  /**
++   *  function to build location block
++   *
++   * @return None
++   * @access public
++   */
++  public function buildQuickForm() {
++    $userLoggedIn = false;
++    if ( $this->_user ) {
++      try {
++        // Proceed knowing you have a logged in user who's authenticated.
++        $userProfile = $this->_facebook->api('/me');
++        if ( $userProfile ) {
++          $userLoggedIn = true;
++          $this->assign('user_profile', $userProfile );
++        }
++      } catch (FacebookApiException $e) {
++        $this->_user = null;
++      }
++    }
++
++    // show event publishing option only if user is logged in
++    if ( $userLoggedIn ) {
++      $attributes = CRM_Core_DAO::getAttribute('CRM_Event_DAO_Event');
++
++      $this->add('text', 'title', ts('Event Title'), $attributes['event_title']);
++      $this->add('textarea', 'summary', ts('Event Summary'), $attributes['summary']);
++
++      $buttons = array(
++        array(
++          'type' => 'upload',
++          'name' => ts('Publish to Facebook'),
++          'isDefault' => TRUE,
++        ),
++        array(
++          'type' => 'cancel',
++          'name' => ts('Cancel'),
++        )
++      );
++      $this->addButtons($buttons);
++    }
++
++    $this->assign('userLoggedIn', $userLoggedIn );
++  }
++
++  /**
++   * Function to process the form
++   *
++   * @access public
++   *
++   * @return None
++   */
++  public function postProcess() {
++    $formValues = $this->exportValues();
++    
++    // publish the event to facebook
++    $event_id = 0;
++    $event_privacy = "SECRET"; 
++
++    $params = array('id' => $this->_id);
++    $values = array();
++    CRM_Event_BAO_Event::retrieve($params, $values);
++
++    $params = array('entity_id' => $this->_id, 'entity_table' => 'civicrm_event');
++    $location = CRM_Core_BAO_Location::getValues($params, TRUE);
++    $location = $location['address'][1];
++    
++    $stateProvinces = CRM_Core_Pseudoconstant::stateProvince();
++    $country        = CRM_Core_Pseudoconstant::country(); 
++
++    $venueInfo = array( 
++      'street'    => $location['street_address'],
++      'city'      => $location['city'],
++      'state'     => $stateProvinces[$location['state_province_id']] , 
++      'zip'       => $location['postal_code'], 
++      'country'   => $country[$location['country_id']], 
++      'latitude'  =>  $location['geo_code_1'], 
++      'longitude' =>  $location['geo_code_2']
++    );
++   
++    //crm_core_error::debug( $venueInfo );
++    //crm_core_error::debug( $values ); exit;
++    // Create an event
++    $ret_obj = $this->_facebook->api('/me/events', 'POST', array(
++      'name' => $formValues['title'],
++      'description' => $formValues['summary'],
++      'start_time' => $values['start_date'],
++      'end_time' => $values['end_date'],
++      'privacy_type' => $event_privacy,
++      'venue'        => $venueInfo  
++    ));
++
++    parent::endPostProcess();
++ 
++  }
++  //end of function
++
++  /**
++   * Return a descriptive name for the page, used in wizard header
++   *
++   * @return string
++   * @access public
++   */
++  public function getTitle() {
++    return ts('Publish to Facebook');
++  }
++}
++
+Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
+===================================================================
+--- templates/CRM/Event/Form/ManageEvent/Promote.tpl	(revision 0)
++++ templates/CRM/Event/Form/ManageEvent/Promote.tpl	(revision 0)
+@@ -0,0 +1,86 @@
++{*
++ +--------------------------------------------------------------------+
++ | CiviCRM version 4.1                                                |
++ +--------------------------------------------------------------------+
++ | Copyright CiviCRM LLC (c) 2004-2011                                |
++ +--------------------------------------------------------------------+
++ | This file is a part of CiviCRM.                                    |
++ |                                                                    |
++ | CiviCRM is free software; you can copy, modify, and distribute it  |
++ | under the terms of the GNU Affero General Public License           |
++ | Version 3, 19 November 2007 and the CiviCRM Licensing Exception.   |
++ |                                                                    |
++ | CiviCRM is distributed in the hope that it will be useful, but     |
++ | WITHOUT ANY WARRANTY; without even the implied warranty of         |
++ | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.               |
++ | See the GNU Affero General Public License for more details.        |
++ |                                                                    |
++ | You should have received a copy of the GNU Affero General Public   |
++ | License and the CiviCRM Licensing Exception along                  |
++ | with this program; if not, contact CiviCRM LLC                     |
++ | at info[AT]civicrm[DOT]org. If you have questions about the        |
++ | GNU Affero General Public License or the licensing of CiviCRM,     |
++ | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
++ +--------------------------------------------------------------------+
++*}
++{* this template used to promote events to facebook *}
++<div id="help">
++{ts}Publish your event to Facebook{/ts}
++</div>
++
++{if $userLoggedIn }
++  <div>
++  {ts}You are logged in to Facebook as {/ts}
++  <a href='{$user_profile.link}'>{$user_profile.first_name} {$user_profile.last_name}</a>
++  </div>
++  <br/>
++  <div class="crm-table2div-layout">
++    <div class="crm-clear"> <!-- start of main -->
++      <div class="crm-label">{$form.title.label}</div>
++      <div class="crm-content">{$form.title.html}</div>
++      <div class="crm-label">{$form.summary.label}</div>
++      <div class="crm-content">{$form.summary.html}</div>
++    </div>
++  </div>
++  <br/>
++  <div class="crm-submit-buttons">
++    {include file="CRM/common/formButtons.tpl"}
++  </div>
++
++{else}
++{literal}
++
++<fb:login-button></fb:login-button>
++<div id="fb-root"></div>
++<script>
++window.fbAsyncInit = function() {
++  FB.init({
++  appId: '319233544823021',
++  cookie: true, 
++  xfbml: true,
++  oauth: true
++  });
++          
++  FB.Event.subscribe('auth.login', function(response) {
++      window.location.reload();
++      });
++  FB.Event.subscribe('auth.logout', function(response) {
++      window.location.reload();
++      });
++};
++
++(function() {
++ var e = document.createElement('script'); e.async = true;
++ e.src = document.location.protocol +
++ '//connect.facebook.net/en_US/all.js';
++ document.getElementById('fb-root').appendChild(e);
++ }());
++
++</script>
++{/literal}
++
++{/if}
++
++
++{* include jscript to warn if unsaved form field changes *}
++{include file="CRM/common/formNavigate.tpl"}
