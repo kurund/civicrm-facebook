@@ -8,6 +8,7 @@ Instructions
 ===========================
 
 1. Create a new facebook app. Check below links
+
    https://developers.facebook.com/apps
    https://developers.facebook.com/docs/guides/appcenter/
 2. Apply this patch.

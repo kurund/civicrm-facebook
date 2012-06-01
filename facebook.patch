@@ -1,6 +1,6 @@
 Index: CRM/Event/xml/Menu/Event.xml
 ===================================================================
---- CRM/Event/xml/Menu/Event.xml	(revision 40637)
+--- CRM/Event/xml/Menu/Event.xml	(revision 40757)
 +++ CRM/Event/xml/Menu/Event.xml	(working copy)
 @@ -219,6 +219,14 @@
       <weight>950</weight>
@@ -19,7 +19,7 @@ Index: CRM/Event/xml/Menu/Event.xml
       <page_callback>CRM_Event_Form_ManageEvent_Conference</page_callback>
 Index: CRM/Event/Form/ManageEvent/TabHeader.php
 ===================================================================
---- CRM/Event/Form/ManageEvent/TabHeader.php	(revision 40637)
+--- CRM/Event/Form/ManageEvent/TabHeader.php	(revision 40757)
 +++ CRM/Event/Form/ManageEvent/TabHeader.php	(working copy)
 @@ -105,6 +105,12 @@
          'active' => FALSE,
@@ -38,7 +38,7 @@ Index: CRM/Event/Form/ManageEvent/Promote.php
 ===================================================================
 --- CRM/Event/Form/ManageEvent/Promote.php	(revision 0)
 +++ CRM/Event/Form/ManageEvent/Promote.php	(revision 0)
-@@ -0,0 +1,230 @@
+@@ -0,0 +1,236 @@
 +<?php
 +/*
 + +--------------------------------------------------------------------+
@@ -105,7 +105,8 @@ Index: CRM/Event/Form/ManageEvent/Promote.php
 +      'appId'  => '319233544823021',
 +      'secret' => '304b7fc206bd31b8df488270a42a0695'
 +    ));
-+    
++
++    $this->assign( 'appId', '319233544823021' );  
 +    $this->assign( 'facebook', $this->_facebook );
 +
 +    // See if there is a user from a cookie
@@ -186,7 +187,8 @@ Index: CRM/Event/Form/ManageEvent/Promote.php
 +    if ( $userLoggedIn ) {
 +      $attributes = CRM_Core_DAO::getAttribute('CRM_Event_DAO_Event');
 +
-+      $this->add('text', 'title', ts('Event Title'), $attributes['event_title']);
++      $title = $this->add('text', 'title', ts('Event Title'), $attributes['event_title']);
++      $title->freeze();
 +      $this->add('textarea', 'summary', ts('Event Summary'), $attributes['summary']);
 +
 +      $buttons = array(
@@ -245,7 +247,7 @@ Index: CRM/Event/Form/ManageEvent/Promote.php
 +    //crm_core_error::debug( $values ); exit;
 +    // Create an event
 +    $ret_obj = $this->_facebook->api('/me/events', 'POST', array(
-+      'name' => $formValues['title'],
++      'name' => $values['title'],
 +      'description' => $formValues['summary'],
 +      'start_time' => $values['start_date'],
 +      'end_time' => $values['end_date'],
@@ -253,8 +255,12 @@ Index: CRM/Event/Form/ManageEvent/Promote.php
 +      'venue'        => $venueInfo  
 +    ));
 +
-+    parent::endPostProcess();
-+ 
++    CRM_Core_Session::setStatus(ts("Event has been published in your facebook account.") );
++
++    CRM_Utils_System::redirect(CRM_Utils_System::url("civicrm/event/manage/promote",
++      "action=update&reset=1&id={$this->_id}"
++    ));
++
 +  }
 +  //end of function
 +
@@ -273,7 +279,7 @@ Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
 ===================================================================
 --- templates/CRM/Event/Form/ManageEvent/Promote.tpl	(revision 0)
 +++ templates/CRM/Event/Form/ManageEvent/Promote.tpl	(revision 0)
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,87 @@
 +{*
 + +--------------------------------------------------------------------+
 + | CiviCRM version 4.1                                                |
@@ -326,12 +332,13 @@ Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
 +{else}
 +{literal}
 +
-+<fb:login-button></fb:login-button>
++<fb:login-button scope="user_events create_event"></fb:login-button>
 +<div id="fb-root"></div>
 +<script>
++var appId = {/literal}"{$appId}"{literal};
 +window.fbAsyncInit = function() {
 +  FB.init({
-+  appId: '319233544823021',
++  appId:  appId,
 +  cookie: true, 
 +  xfbml: true,
 +  oauth: true
@@ -360,3 +367,23 @@ Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
 +
 +{* include jscript to warn if unsaved form field changes *}
 +{include file="CRM/common/formNavigate.tpl"}
+Index: templates/CRM/Event/Page/ManageEvent.tpl
+===================================================================
+--- templates/CRM/Event/Page/ManageEvent.tpl	(revision 40757)
++++ templates/CRM/Event/Page/ManageEvent.tpl	(working copy)
+@@ -90,12 +90,13 @@
+         		    <li><a title="{ts}Location{/ts}" class="action-item-wrap {if NOT $row.is_show_location} disabled{/if}" href="{crmURL p='civicrm/event/manage/location' q="reset=1&action=update&id=`$row.id`"}">{ts}Location{/ts}</a></li>
+         		    <li><a title="{ts}Fees{/ts}" class="action-item {if NOT $row.is_monetary} disabled{/if}" href="{crmURL p='civicrm/event/manage/fee' q="reset=1&action=update&id=`$row.id`"}">{ts}Fees{/ts}</a></li>
+         		    <li><a title="{ts}Online Registration{/ts}" class="action-item-wrap {if NOT $row.is_online_registration} disabled{/if}" href="{crmURL p='civicrm/event/manage/registration' q="reset=1&action=update&id=`$row.id`"}">{ts}Online Registration{/ts}</a></li>
+-			        <li><a title="{ts}Schedule Reminders{/ts}" class="action-item-wrap {if NOT $row.reminder} disabled{/if}" href="{crmURL p='civicrm/event/manage/reminder' q="reset=1&action=update&id=`$row.id`"}">{ts}Schedule Reminders{/ts}</a></li>
++			          <li><a title="{ts}Schedule Reminders{/ts}" class="action-item-wrap {if NOT $row.reminder} disabled{/if}" href="{crmURL p='civicrm/event/manage/reminder' q="reset=1&action=update&id=`$row.id`"}">{ts}Schedule Reminders{/ts}</a></li>
+ 			        {if $eventCartEnabled}
+                     <li><a title="{ts}Conference Slots{/ts}" class="action-item-wrap {if NOT $row.slot_label_id} disabled{/if}" href="{crmURL p='civicrm/event/manage/conference' q="reset=1&action=update&id=`$row.id`"}">{ts}Conference Slots{/ts}</a></li>
+                     {/if}
+         		    <li><a title="{ts}Tell a Friend{/ts}" class="action-item-wrap {if NOT $row.friend} disabled{/if}" href="{crmURL p='civicrm/event/manage/friend' q="reset=1&action=update&id=`$row.id`"}">{ts}Tell a Friend{/ts}</a></li>
+-                    <li><a title="{ts}Personal Campaign Pages{/ts}" class="action-item-wrap {if NOT $row.is_pcp_enabled} disabled{/if}" href="{crmURL p='civicrm/event/manage/pcp' q="reset=1&action=update&id=`$row.id`"}">{ts}Personal Campaign Pages{/ts}</a></li>
++                <li><a title="{ts}Personal Campaign Pages{/ts}" class="action-item-wrap {if NOT $row.is_pcp_enabled} disabled{/if}" href="{crmURL p='civicrm/event/manage/pcp' q="reset=1&action=update&id=`$row.id`"}">{ts}Personal Campaign Pages{/ts}</a></li>
++                <li><a title="{ts}Promote to Facebook{/ts}" class="action-item-wrap" href="{crmURL p='civicrm/event/manage/promote' q="reset=1&action=update&id=`$row.id`"}">{ts}Promote to Facebook{/ts}</a></li>
+ 			        </ul> 
+         	    </span>
+         	    </div>
