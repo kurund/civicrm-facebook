@@ -12,6 +12,8 @@ Instructions
    https://developers.facebook.com/apps
    https://developers.facebook.com/docs/guides/appcenter/
 2. Apply this patch.
+   - copy facebook.patch file to civicrm folder ( root folder )
+   - patch -p0 -i facebook.patch
 3. Create packages/facebook diretory in civicrm packages folder
 4. Download and unzip facebook PHP SDK in above folder.
    https://developers.facebook.com/docs/sdks/
