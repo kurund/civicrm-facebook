@@ -1,6 +1,6 @@
 Index: CRM/Event/xml/Menu/Event.xml
 ===================================================================
---- CRM/Event/xml/Menu/Event.xml	(revision 40757)
+--- CRM/Event/xml/Menu/Event.xml	(revision 41069)
 +++ CRM/Event/xml/Menu/Event.xml	(working copy)
 @@ -219,6 +219,14 @@
       <weight>950</weight>
@@ -17,23 +17,6 @@ Index: CRM/Event/xml/Menu/Event.xml
       <path>civicrm/event/manage/conference</path>
       <title>Conference Slots</title>
       <page_callback>CRM_Event_Form_ManageEvent_Conference</page_callback>
-Index: CRM/Event/Form/ManageEvent/TabHeader.php
-===================================================================
---- CRM/Event/Form/ManageEvent/TabHeader.php	(revision 40757)
-+++ CRM/Event/Form/ManageEvent/TabHeader.php	(working copy)
-@@ -105,6 +105,12 @@
-         'active' => FALSE,
-         'current' => FALSE,
-       ),
-+      'promote' => array('title' => ts('Publish to Facebook'),
-+        'link' => NULL,
-+        'valid' => FALSE,
-+        'active' => FALSE,
-+        'current' => FALSE,
-+      )
-     );
- 
-     // check if we're in shopping cart mode for events
 Index: CRM/Event/Form/ManageEvent/Promote.php
 ===================================================================
 --- CRM/Event/Form/ManageEvent/Promote.php	(revision 0)
@@ -332,7 +315,7 @@ Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
 +{else}
 +{literal}
 +
-+<fb:login-button scope="user_events create_event"></fb:login-button>
++<fb:login-button scope="user_events create_event manage_pages publish_stream"></fb:login-button>
 +<div id="fb-root"></div>
 +<script>
 +var appId = {/literal}"{$appId}"{literal};
@@ -369,7 +352,7 @@ Index: templates/CRM/Event/Form/ManageEvent/Promote.tpl
 +{include file="CRM/common/formNavigate.tpl"}
 Index: templates/CRM/Event/Page/ManageEvent.tpl
 ===================================================================
---- templates/CRM/Event/Page/ManageEvent.tpl	(revision 40757)
+--- templates/CRM/Event/Page/ManageEvent.tpl	(revision 41069)
 +++ templates/CRM/Event/Page/ManageEvent.tpl	(working copy)
 @@ -90,12 +90,13 @@
          		    <li><a title="{ts}Location{/ts}" class="action-item-wrap {if NOT $row.is_show_location} disabled{/if}" href="{crmURL p='civicrm/event/manage/location' q="reset=1&action=update&id=`$row.id`"}">{ts}Location{/ts}</a></li>
