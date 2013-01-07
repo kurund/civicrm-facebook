@@ -3,6 +3,8 @@ civicrm-facebook
 
 Allow admin to post CiviCRM events to Facebook
 
+Note: This will be moved to core: http://issues.civicrm.org/jira/browse/CRM-10301
+
 ===========================
 Instructions
 ===========================
